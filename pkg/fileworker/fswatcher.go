@@ -14,8 +14,8 @@ import (
 )
 
 type Fswatcher struct {
-	Watcher    *fsnotify.Watcher
-	FileMap    map[string]chan fsnotify.Op
+	Watcher *fsnotify.Watcher
+	FileMap map[string]chan fsnotify.Op
 }
 
 const WAIT_TIME = 3 * time.Second
@@ -29,8 +29,8 @@ func New() *Fswatcher {
 	}
 
 	fs := &Fswatcher{
-		Watcher:    watcher,
-		FileMap:    fileMap,
+		Watcher: watcher,
+		FileMap: fileMap,
 	}
 	homeDir, err := os.UserHomeDir()
 	downloadPath := fmt.Sprintf("%s/Downloads", homeDir)
@@ -46,17 +46,20 @@ func (fs *Fswatcher) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 	log.Logger.Infoln("Start FsWatcher")
 	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
+
 		defer fs.Watcher.Close()
+		defer wg.Done()
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Logger.Infoln("Stop FsWatcher : context kill signal was sent")
+				return
 			case evt, ok := <-fs.Watcher.Events:
 				if !ok {
 					return
 				}
-				// .ica 아니면 무시
+				// filter file(.ica)
 				if !strings.HasSuffix(evt.Name, ".ica") {
 					continue
 				}
@@ -110,10 +113,10 @@ func (fs *Fswatcher) Start(ctx context.Context, wg *sync.WaitGroup) {
 					break
 				}
 				log.Logger.Error("error:", err)
+			default:
 			}
 		}
 		log.Logger.Infoln("Stop FsWatcher : Loop Out")
-
 	}(wg)
 
 }
